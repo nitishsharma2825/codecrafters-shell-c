@@ -4,8 +4,12 @@
 
 int main() {
 
+  char *built_in_commands[] = {"echo", "type", "cat", "exit"};
+  int numOfCommands = sizeof(built_in_commands) / sizeof(built_in_commands[0]);
+
   while (1)
   {
+
     printf("$ ");
     fflush(stdout);
 
@@ -18,13 +22,43 @@ int main() {
     char *commandType = strtok(command, " ");
 
     if (strcmp(input, "exit 0") == 0) {
+
       exit(0);
+    
     } else if (strcmp(commandType, "echo") == 0) {
+
       printf("%s\n", input+5);
+
+    } else if (strcmp(commandType, "type") == 0) {
+
+      char *commandType = strtok(NULL, " ");
+      int found = 0;
+      for (size_t i = 0; i < numOfCommands; i++) {
+
+        if (strcmp(commandType, built_in_commands[i]) == 0) {
+
+          found = 1;
+          printf("%s is a shell builtin\n", commandType);
+          break;
+
+        }
+        
+      }
+
+      if (!found) {
+
+        printf("%s not found\n", commandType);
+
+      }
+
     } else {
+
       printf("%s: command not found\n", input);
+
     }
+
     fflush(stdout);
+
   }
 
   return 0;
