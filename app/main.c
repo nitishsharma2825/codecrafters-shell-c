@@ -2,6 +2,51 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+
+int is_executable(const char* path) {
+  return access(path, X_OK) == 0;
+}
+
+char *find_in_path(char *commandType) {
+  char *path = getenv("PATH");
+  char *path_copy = strdup(path);
+
+  char *dir = strtok(path_copy, ":");
+  static char full_path[1024];
+  while (dir!=NULL) {    
+    sprintf(full_path, "%s/%s", dir, commandType);      
+    if (is_executable(full_path))
+    {
+      return full_path;
+    }
+    dir = strtok(NULL, ":");
+  }
+
+  return NULL;
+}
+
+void execute_cmd(char **argv) {
+  pid_t pid = fork();
+  if (pid < 0)
+  {
+    fprintf(stderr, "fork failed\n");
+    exit(1);
+  }
+  else if (pid == 0)
+  {
+    execv(argv[0], argv);
+    fprintf(stderr, "exec failed!\n");
+    exit(1);
+  }
+  else
+  {
+    int status;
+    waitpid(pid, &status, 0);
+  }
+}
+
 
 int main() {
 
@@ -42,36 +87,40 @@ int main() {
           break;
         }
       }
-      
-      char *path = getenv("PATH");
-      char *path_copy = strdup(path);
 
-      char *dir = strtok(path_copy, ":");
-      char full_path[1024];
-      while (dir!=NULL) {
-        if (found == 1)
+      if (found == 0)
+      {
+        char *path = find_in_path(commandType); 
+        if (path)
         {
-          break;
+          printf("%s is %s\n", commandType, path);
         }
-        
-        sprintf(full_path, "%s/%s", dir, commandType);      
-        if (access(full_path, X_OK) == 0 )
+        else
         {
-          found = 1;
-          printf("%s is %s\n", commandType, full_path);
-          break;
-        }
-        dir = strtok(NULL, ":");
-      }
-
-      if (!found) {
           printf("%s: not found\n", commandType);
+        }
       }
 
     } else {
-
-      printf("%s: command not found\n", input);
-
+      char *argv[10];
+      int argc = 0;
+      
+      while (commandType != NULL)
+      {
+        argv[argc++] = commandType;
+        commandType = strtok(NULL, " ");
+      }
+      argv[argc] = NULL;
+      char *path = find_in_path(argv[0]);
+      if (path)
+      {
+        argv[0] = path;
+        execute_cmd(argv);
+      }
+      else
+      {
+        printf("%s: command not found\n", argv[0]);
+      }
     }
 
     fflush(stdout);
